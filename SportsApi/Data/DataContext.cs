@@ -11,6 +11,5 @@ namespace SportsApi.Data
 
         public DbSet<Sport> Sports { get; set; }
 
-        // public DbSet<FavouriteSport> FavouriteSports { get; set; }
     }
 }
