@@ -23,12 +23,12 @@ namespace SportsApi.Controllers
         public async Task<ActionResult<List<FavouriteSportQuery>>> GetSports()
         {
             List<FavouriteSportQuery> favouriteSports = await (from sport in _context.Sports
-                                  where sport.IsEnabled == true
-                                  select new FavouriteSportQuery
-                                  {
-                                      Name = sport.Name,
-                                      Favourites = sport.People.Count
-                                  }).ToListAsync();
+                                                               where sport.IsEnabled == true
+                                                               select new FavouriteSportQuery
+                                                               {
+                                                                   Name = sport.Name,
+                                                                   Favourites = sport.People.Count
+                                                               }).ToListAsync();
 
             return Ok(favouriteSports);
         }

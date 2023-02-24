@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SportsApi.Data;
 using SportsApi.Models;
 using SportsApi.Queries;
+using System;
 
 namespace SportsApi.Controllers
 {
@@ -18,45 +19,36 @@ namespace SportsApi.Controllers
             _context = context;
         }
 
-        [HttpPost]
-        public async Task<ActionResult<List<Person>>> AddPerson(Person person)
-        {
-            if (person == null) { return  BadRequest(); }
-
-            _context.People.Add(person);
-            await _context.SaveChangesAsync();
-
-            return Ok(await _context.People.ToListAsync());
-        }
-
         [HttpGet]
         public async Task<ActionResult<List<PersonFavouritesQuery>>> GetPeople()
         {
             List<PersonFavouritesQuery> personFavourites = await (from person in _context.People
-                                                 select new PersonFavouritesQuery
-                                                 {
-                                                     FirstName = person.FirstName,
-                                                     LastName = person.LastName,
-                                                     IsEnabled = person.IsEnabled,
-                                                     IsValid = person.IsValid,
-                                                     IsAuthorised = person.IsAuthorised,
-                                                     FavouriteSports = person.Sports.Select(s => s.Name).ToList()
-                                                 }).ToListAsync();
+                                                                  select new PersonFavouritesQuery
+                                                                  {
+                                                                      FirstName = person.FirstName,
+                                                                      LastName = person.LastName,
+                                                                      IsEnabled = person.IsEnabled,
+                                                                      IsValid = person.IsValid,
+                                                                      IsAuthorised = person.IsAuthorised,
+                                                                      FavouriteSports = person.Sports.Select(s => s.Name).ToList()
+                                                                  }).ToListAsync();
 
             return Ok(personFavourites);
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Person>> GetPerson(long id)
+        public async Task<ActionResult<PersonSportQuery>> GetPerson(long id)
         {
-            var person = await _context.People.FindAsync(id);
+            var personSport = (from person in _context.People
+                               where person.Id == id
+                               select new PersonSportQuery
+                               {
+                                   FirstName = person.FirstName,
+                                   LastName = person.LastName,
+                                   FavouriteSport = person.Sports.First() == null ? "No favourite sport" : person.Sports.First().Name
+                               });
 
-            if (person == null)
-            {
-                return BadRequest("Person not found.");
-            }
-
-            return Ok(person);
+            return Ok(personSport);
         }
 
     }
