@@ -1,4 +1,4 @@
-﻿namespace SportsApi.Queries
+﻿namespace SportsApi.Queries.Sports
 {
     public class FavouriteSportQuery
     {

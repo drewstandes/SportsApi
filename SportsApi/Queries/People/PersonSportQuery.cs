@@ -1,4 +1,4 @@
-﻿namespace SportsApi.Queries
+﻿namespace SportsApi.Queries.People
 {
     public class PersonSportQuery
     {

@@ -5,7 +5,8 @@ using Microsoft.EntityFrameworkCore.Query.Internal;
 using SportsApi.Controllers;
 using SportsApi.Data;
 using SportsApi.Models;
-using SportsApi.Queries;
+using SportsApi.Queries.People;
+using SportsApi.Queries.Sports;
 
 namespace SportsApiTest
 {
@@ -61,8 +62,19 @@ namespace SportsApiTest
 
         }
 
+        private async Task<DataContext> getEmptyDbContext()
+        {
+            var options = new DbContextOptionsBuilder<DataContext>()
+                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+                .Options;
 
-        [Fact]
+            var dataContext = new DataContext(options);
+            dataContext.Database.EnsureCreated();
+            return dataContext;
+        }
+
+
+            [Fact]
         public async void GetPerson_Returns_PersonSportQuery()
         {
             // Arrange 
@@ -76,7 +88,7 @@ namespace SportsApiTest
             };
 
             // Act 
-            ActionResult<PersonSportQuery> actionResult = await peopleController.GetPerson(1L);
+            ActionResult<PersonSportQuery> actionResult = await peopleController.GetPerson(4L);
             var result = actionResult.Result as OkObjectResult;
             var actualPersonSportQuery = result.Value as PersonSportQuery;
 
@@ -89,25 +101,17 @@ namespace SportsApiTest
         [Fact]
         public async void GetPersonInvalidId_Returns_BadRequest()
         {
-            // TODO
+            // Arrange
             var dataContext = await getDbContext();
             PeopleController peopleController = new PeopleController(dataContext);
-            PersonSportQuery expectedPersonSportQuery = new PersonSportQuery
-            {
-                FirstName = "John",
-                LastName = "Snow",
-                FavouriteSport = "American Football"
-            };
 
             // Act 
             ActionResult<PersonSportQuery> actionResult = await peopleController.GetPerson(4L);
             var result = actionResult.Result as BadRequestObjectResult;
-            var query = result.Value as EntityQueryable<PersonSportQuery>;
-
-            var actualPersonSportQuery = query.First();
+            
 
             // Assert
-            actualPersonSportQuery.Should().BeEquivalentTo(expectedPersonSportQuery);
+            result.Value.Should().Be("There is no person with that Id.");
 
         }
 
@@ -159,6 +163,10 @@ namespace SportsApiTest
         }
 
         [Fact]
+        public async void GetPeople_NoSports_Returns_BadRequest_With_None() { 
+        }
+
+        [Fact]
         public async void GetSports_Returns_ListOf_FavouriteSportsQuery()
         {
             // TODO
@@ -189,6 +197,23 @@ namespace SportsApiTest
 
             // Assert
             actualListFavouriteSportQuery.Should().BeEquivalentTo(expectedListFavouriteSportQuery);
+
+        }
+
+        [Fact]
+        public async void GetSports_Returns_BadRequest()
+        {
+            // Arrange
+            var dataContext = await getEmptyDbContext();
+            SportsController sportsController = new SportsController(dataContext);
+
+            // Act 
+            ActionResult<List<FavouriteSportQuery>> actionResult = await sportsController.GetSports();
+            var result = actionResult.Result as BadRequestObjectResult;
+
+
+            // Assert
+            result.Value.Should().Be("There are no sports to return.");
 
         }
 

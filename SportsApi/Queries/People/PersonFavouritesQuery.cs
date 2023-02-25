@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace SportsApi.Queries
+namespace SportsApi.Queries.People
 {
     public class PersonFavouritesQuery
     {

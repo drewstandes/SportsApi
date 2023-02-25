@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using SportsApi.Data;
 using SportsApi.Models;
-using SportsApi.Queries;
+using SportsApi.Queries.Sports;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -29,6 +29,11 @@ namespace SportsApi.Controllers
                                                                    Name = sport.Name,
                                                                    Favourites = sport.People.Count
                                                                }).ToListAsync();
+
+            if (favouriteSports.Count == 0)
+            {
+                return BadRequest("There are no sports to return.");
+            }
 
             return Ok(favouriteSports);
         }
