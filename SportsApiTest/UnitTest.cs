@@ -157,5 +157,42 @@ namespace SportsApiTest
             actualListPersonFavouritesQuery.Should().BeEquivalentTo(expectedListPersonFavouritesQuery);
 
         }
+
+        [Fact]
+        public async void GetSports_Returns_ListOf_FavouriteSportsQuery()
+        {
+            // TODO
+            var dataContext = await getDbContext();
+            SportsController sportController = new SportsController(dataContext);
+            List<FavouriteSportQuery> expectedListFavouriteSportQuery = new List<FavouriteSportQuery>
+            { new FavouriteSportQuery
+            {
+                       Name = "American Football",
+                       Favourites = 2
+            },
+            new FavouriteSportQuery
+            {
+                       Name = "Baseball",
+                       Favourites = 2
+            },
+            new FavouriteSportQuery
+            {
+                       Name = "Basketball",
+                       Favourites = 2
+            },
+            };
+
+            // Act 
+            ActionResult<List<FavouriteSportQuery>> actionResult = await sportController.GetSports();
+            var result = actionResult.Result as OkObjectResult;
+            var actualListFavouriteSportQuery = result.Value as List<FavouriteSportQuery>;
+
+            // Assert
+            actualListFavouriteSportQuery.Should().BeEquivalentTo(expectedListFavouriteSportQuery);
+
+        }
+
+
+
     }
 }
