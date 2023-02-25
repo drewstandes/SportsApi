@@ -1,5 +1,7 @@
+using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query.Internal;
 using SportsApi.Controllers;
 using SportsApi.Data;
 using SportsApi.Models;
@@ -41,14 +43,14 @@ namespace SportsApiTest
                         IsAuthorised = true,
                         IsEnabled = true,
                         IsValid = true,
-                        Sports = new List<Sport> { sport1, sport2 }
+                        Sports = new List<Sport> { sport2, sport3 }
                     },
                     new Person
                     {
                         FirstName = "John",
                         LastName = "Cena",
                         IsAuthorised = true,
-                        IsEnabled = true,
+                        IsEnabled = false,
                         IsValid = true,
                         Sports = new List<Sport> { sport1 }
                     }
@@ -65,7 +67,7 @@ namespace SportsApiTest
         {
             // Arrange 
             var dataContext = await getDbContext();
-            PeopleController peopleController = new PeopleController( dataContext );
+            PeopleController peopleController = new PeopleController(dataContext);
             PersonSportQuery expectedPersonSportQuery = new PersonSportQuery
             {
                 FirstName = "John",
@@ -75,9 +77,84 @@ namespace SportsApiTest
 
             // Act 
             ActionResult<PersonSportQuery> actionResult = await peopleController.GetPerson(1L);
-            
+            var result = actionResult.Result as OkObjectResult;
+            var actualPersonSportQuery = result.Value as PersonSportQuery;
+
             // Assert
-            
+            actualPersonSportQuery.Should().BeEquivalentTo(expectedPersonSportQuery);
+
+        }
+
+
+        [Fact]
+        public async void GetPersonInvalidId_Returns_BadRequest()
+        {
+            // TODO
+            var dataContext = await getDbContext();
+            PeopleController peopleController = new PeopleController(dataContext);
+            PersonSportQuery expectedPersonSportQuery = new PersonSportQuery
+            {
+                FirstName = "John",
+                LastName = "Snow",
+                FavouriteSport = "American Football"
+            };
+
+            // Act 
+            ActionResult<PersonSportQuery> actionResult = await peopleController.GetPerson(4L);
+            var result = actionResult.Result as BadRequestObjectResult;
+            var query = result.Value as EntityQueryable<PersonSportQuery>;
+
+            var actualPersonSportQuery = query.First();
+
+            // Assert
+            actualPersonSportQuery.Should().BeEquivalentTo(expectedPersonSportQuery);
+
+        }
+
+        [Fact]
+        public async void GetPeople_Returns_ListOf_PersonFavouritesQuery()
+        {
+            // Arrange 
+            var dataContext = await getDbContext();
+            PeopleController peopleController = new PeopleController(dataContext);
+            List<PersonFavouritesQuery> expectedListPersonFavouritesQuery = new List<PersonFavouritesQuery>
+            { new PersonFavouritesQuery
+            {
+                        FirstName = "John",
+                        LastName = "Snow",
+                        IsAuthorised = true,
+                        IsEnabled = true,
+                        IsValid = true,
+                        FavouriteSports = new List<string> {"American Football", "Basketball", "Baseball"}
+            },
+            new PersonFavouritesQuery
+            {
+                        FirstName = "John",
+                        LastName = "Wick",
+                        IsAuthorised = true,
+                        IsEnabled = true,
+                        IsValid = true,
+                        FavouriteSports = new List<string> {"Basketball", "Baseball"}
+            },
+            new PersonFavouritesQuery
+            {
+                        FirstName = "John",
+                        LastName = "Cena",
+                        IsAuthorised = true,
+                        IsEnabled = false,
+                        IsValid = true,
+                        FavouriteSports = new List<string> {"American Football"}
+            },
+            };
+
+
+            // Act 
+            ActionResult<List<PersonFavouritesQuery>> actionResult = await peopleController.GetPeople();
+            var result = actionResult.Result as OkObjectResult;
+            var actualListPersonFavouritesQuery = result.Value as List<PersonFavouritesQuery>;
+
+            // Assert
+            actualListPersonFavouritesQuery.Should().BeEquivalentTo(expectedListPersonFavouritesQuery);
 
         }
     }

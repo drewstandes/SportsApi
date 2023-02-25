@@ -39,14 +39,14 @@ namespace SportsApi.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<PersonSportQuery>> GetPerson(long id)
         {
-            var personSport = (from person in _context.People
+            PersonSportQuery personSport = (from person in _context.People
                                where person.Id == id
                                select new PersonSportQuery
                                {
                                    FirstName = person.FirstName,
                                    LastName = person.LastName,
                                    FavouriteSport = person.Sports.First() == null ? "No favourite sport" : person.Sports.First().Name
-                               });
+                               }).Single();
 
             return Ok(personSport);
         }
