@@ -12,30 +12,18 @@ namespace SportsApiTest
 {
     public class UnitTest
     {
-        private async Task<DataContext> getDbContext()
+        private Person[] getPeople(Sport[] sports)
         {
-            var options = new DbContextOptionsBuilder<DataContext>()
-                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-                .Options;
-
-            var dataContext = new DataContext(options);
-            dataContext.Database.EnsureCreated();
-
-            var sport1 = new Sport { Name = "American Football", IsEnabled = true };
-            var sport2 = new Sport { Name = "Basketball", IsEnabled = true };
-            var sport3 = new Sport { Name = "Baseball", IsEnabled = true };
-
-            if (await dataContext.People.CountAsync() <= 0)
-            {
-                dataContext.People.AddRange(
-                    new Person
+           return new Person[]
+         {
+             new Person
                     {
                         FirstName = "John",
                         LastName = "Snow",
                         IsAuthorised = true,
                         IsEnabled = true,
                         IsValid = true,
-                        Sports = new List<Sport> { sport1, sport2, sport3 }
+                        Sports = new List<Sport> { sports[0], sports[1], sports[2] }
                     },
                     new Person
                     {
@@ -44,7 +32,7 @@ namespace SportsApiTest
                         IsAuthorised = true,
                         IsEnabled = true,
                         IsValid = true,
-                        Sports = new List<Sport> { sport2, sport3 }
+                        Sports = new List<Sport> { sports[1], sports[2] }
                     },
                     new Person
                     {
@@ -53,8 +41,33 @@ namespace SportsApiTest
                         IsAuthorised = true,
                         IsEnabled = false,
                         IsValid = true,
-                        Sports = new List<Sport> { sport1 }
+                        Sports = new List<Sport> { sports[0] }
                     }
+         };
+        }
+
+        private Sport[] getSports()
+        {
+            return new Sport[] {
+            new Sport { Name = "American Football", IsEnabled = true },
+            new Sport { Name = "Basketball", IsEnabled = true },
+            new Sport { Name = "Baseball", IsEnabled = true }
+        };
+        }
+
+        private async Task<DataContext> getDbContext(Person[] people)
+        {
+            var options = new DbContextOptionsBuilder<DataContext>()
+                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+                .Options;
+
+            var dataContext = new DataContext(options);
+            dataContext.Database.EnsureCreated();
+
+            if (await dataContext.People.CountAsync() <= 0)
+            {
+                dataContext.People.AddRange(
+                    people
                     );
                 await dataContext.SaveChangesAsync();
             }
@@ -62,7 +75,7 @@ namespace SportsApiTest
 
         }
 
-        private async Task<DataContext> getEmptyDbContext()
+        private DataContext getEmptyDbContext()
         {
             var options = new DbContextOptionsBuilder<DataContext>()
                 .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
@@ -74,21 +87,22 @@ namespace SportsApiTest
         }
 
 
-            [Fact]
+        [Fact]
         public async void GetPerson_Returns_PersonSportQuery()
         {
             // Arrange 
-            var dataContext = await getDbContext();
+            Person[] actualPeople = getPeople(getSports());
+            var dataContext = await getDbContext(actualPeople);
             PeopleController peopleController = new PeopleController(dataContext);
             PersonSportQuery expectedPersonSportQuery = new PersonSportQuery
             {
-                FirstName = "John",
-                LastName = "Snow",
-                FavouriteSport = "American Football"
+                FirstName = actualPeople[1].FirstName,
+                LastName = actualPeople[1].LastName,
+                FavouriteSport = actualPeople[1].Sports.First().Name
             };
 
             // Act 
-            ActionResult<PersonSportQuery> actionResult = await peopleController.GetPerson(4L);
+            ActionResult<PersonSportQuery> actionResult = await peopleController.GetPerson(actualPeople[1].Id);
             var result = actionResult.Result as OkObjectResult;
             var actualPersonSportQuery = result.Value as PersonSportQuery;
 
@@ -102,13 +116,13 @@ namespace SportsApiTest
         public async void GetPersonInvalidId_Returns_BadRequest()
         {
             // Arrange
-            var dataContext = await getDbContext();
+            var dataContext = await getDbContext(getPeople(getSports()));
             PeopleController peopleController = new PeopleController(dataContext);
 
             // Act 
             ActionResult<PersonSportQuery> actionResult = await peopleController.GetPerson(4L);
             var result = actionResult.Result as BadRequestObjectResult;
-            
+
 
             // Assert
             result.Value.Should().Be("There is no person with that Id.");
@@ -119,37 +133,40 @@ namespace SportsApiTest
         public async void GetPeople_Returns_ListOf_PersonFavouritesQuery()
         {
             // Arrange 
-            var dataContext = await getDbContext();
-            PeopleController peopleController = new PeopleController(dataContext);
+            Person[] actualPeople = getPeople(getSports());
+            var dataContext = await getDbContext(actualPeople);
             List<PersonFavouritesQuery> expectedListPersonFavouritesQuery = new List<PersonFavouritesQuery>
             { new PersonFavouritesQuery
             {
-                        FirstName = "John",
-                        LastName = "Snow",
-                        IsAuthorised = true,
-                        IsEnabled = true,
-                        IsValid = true,
-                        FavouriteSports = new List<string> {"American Football", "Basketball", "Baseball"}
+                        FirstName = actualPeople[0].FirstName,
+                        LastName = actualPeople[0].LastName,
+                        IsAuthorised = actualPeople[0].IsAuthorised,
+                        IsEnabled = actualPeople[0].IsEnabled,
+                        IsValid = actualPeople[0].IsValid,
+                        FavouriteSports = new List<string> { actualPeople[0].Sports.ElementAt(0).Name, actualPeople[0].Sports.ElementAt(1).Name, actualPeople[0].Sports.ElementAt(2).Name }
             },
             new PersonFavouritesQuery
             {
-                        FirstName = "John",
-                        LastName = "Wick",
-                        IsAuthorised = true,
-                        IsEnabled = true,
-                        IsValid = true,
-                        FavouriteSports = new List<string> {"Basketball", "Baseball"}
+                         FirstName = actualPeople[1].FirstName,
+                        LastName = actualPeople[1].LastName,
+                        IsAuthorised = actualPeople[1].IsAuthorised,
+                        IsEnabled = actualPeople[1].IsEnabled,
+                        IsValid = actualPeople[1].IsValid,
+                        FavouriteSports = new List<string> { actualPeople[1].Sports.ElementAt(0).Name, actualPeople[1].Sports.ElementAt(1).Name}
             },
             new PersonFavouritesQuery
             {
-                        FirstName = "John",
-                        LastName = "Cena",
-                        IsAuthorised = true,
-                        IsEnabled = false,
-                        IsValid = true,
-                        FavouriteSports = new List<string> {"American Football"}
+                        FirstName = actualPeople[2].FirstName,
+                        LastName = actualPeople[2].LastName,
+                        IsAuthorised = actualPeople[2].IsAuthorised,
+                        IsEnabled = actualPeople[2].IsEnabled,
+                        IsValid = actualPeople[2].IsValid,
+                        FavouriteSports = new List<string> { actualPeople[2].Sports.ElementAt(0).Name}
             },
             };
+
+            PeopleController peopleController = new PeopleController(dataContext);
+
 
 
             // Act 
@@ -163,14 +180,47 @@ namespace SportsApiTest
         }
 
         [Fact]
-        public async void GetPeople_NoSports_Returns_BadRequest_With_None() { 
+        public async void GetPeople_NoSports_Returns_With_None()
+        {
+            // Arrange 
+            var dataContext = getEmptyDbContext();
+            Person actualPerson = getPeople(getSports()).ElementAt(0);
+            // Empty list of sports 
+            actualPerson.Sports = new List<Sport> { };
+            if (await dataContext.People.CountAsync() <= 0)
+            {
+                dataContext.People.Add(
+                   actualPerson
+                    );
+                await dataContext.SaveChangesAsync();
+            }
+
+            List<PersonFavouritesQuery> expectedListPersonFavouritesQuery = new List<PersonFavouritesQuery>
+            { new PersonFavouritesQuery
+            {
+                        FirstName = actualPerson.FirstName,
+                        LastName = actualPerson.LastName,
+                        IsAuthorised = actualPerson.IsAuthorised,
+                        IsEnabled = actualPerson.IsEnabled,
+                        IsValid = actualPerson.IsValid,
+                        FavouriteSports = new List<string> { }
+            } };
+            PeopleController peopleController = new PeopleController(dataContext);
+
+            // Act 
+            ActionResult<List<PersonFavouritesQuery>> actionResult = await peopleController.GetPeople();
+            var result = actionResult.Result as OkObjectResult;
+            var actualListPersonFavouritesQuery = result.Value as List<PersonFavouritesQuery>;
+
+            // Assert
+            actualListPersonFavouritesQuery.Should().BeEquivalentTo(expectedListPersonFavouritesQuery);
         }
 
         [Fact]
         public async void GetSports_Returns_ListOf_FavouriteSportsQuery()
         {
             // TODO
-            var dataContext = await getDbContext();
+            var dataContext = await getDbContext(getPeople(getSports()));
             SportsController sportController = new SportsController(dataContext);
             List<FavouriteSportQuery> expectedListFavouriteSportQuery = new List<FavouriteSportQuery>
             { new FavouriteSportQuery
@@ -201,10 +251,10 @@ namespace SportsApiTest
         }
 
         [Fact]
-        public async void GetSports_Returns_BadRequest()
+        public async void GetSports_On_EmptyTable_Returns_BadRequest()
         {
             // Arrange
-            var dataContext = await getEmptyDbContext();
+            var dataContext = getEmptyDbContext();
             SportsController sportsController = new SportsController(dataContext);
 
             // Act 

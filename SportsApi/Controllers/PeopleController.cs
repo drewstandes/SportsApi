@@ -22,7 +22,6 @@ namespace SportsApi.Controllers
         [HttpGet]
         public async Task<ActionResult<List<PersonFavouritesQuery>>> GetPeople()
         {
-            List<string> noSportsList = new List<string> { "None" };
             List<PersonFavouritesQuery> personFavourites = await (from person in _context.People
                                                                   select new PersonFavouritesQuery
                                                                   {
@@ -31,7 +30,7 @@ namespace SportsApi.Controllers
                                                                       IsEnabled = person.IsEnabled,
                                                                       IsValid = person.IsValid,
                                                                       IsAuthorised = person.IsAuthorised,
-                                                                      FavouriteSports = person.Sports != null ? person.Sports.Select(s => s.Name).ToList() : noSportsList
+                                                                      FavouriteSports = person.Sports.Select(s => s.Name).ToList()
                                                                   }).ToListAsync();
 
             return Ok(personFavourites);
