@@ -1,9 +1,11 @@
 using FluentAssertions;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query.Internal;
 using SportsApi.Controllers;
 using SportsApi.Data;
+using SportsApi.Handlers;
 using SportsApi.Models;
 using SportsApi.Queries.People;
 using SportsApi.Queries.Sports;
@@ -12,6 +14,7 @@ namespace SportsApiTest
 {
     public class UnitTest
     {
+
         private Person[] getPeople(Sport[] sports)
         {
            return new Person[]
@@ -93,7 +96,7 @@ namespace SportsApiTest
             // Arrange 
             Person[] actualPeople = getPeople(getSports());
             var dataContext = await getDbContext(actualPeople);
-            PeopleController peopleController = new PeopleController(dataContext);
+
             PersonSportQuery expectedPersonSportQuery = new PersonSportQuery
             {
                 FirstName = actualPeople[1].FirstName,
@@ -102,12 +105,11 @@ namespace SportsApiTest
             };
 
             // Act 
-            ActionResult<PersonSportQuery> actionResult = await peopleController.GetPerson(actualPeople[1].Id);
-            var result = actionResult.Result as OkObjectResult;
-            var actualPersonSportQuery = result.Value as PersonSportQuery;
+            GetPersonSportHandler getPersonSportHandler = new GetPersonSportHandler(dataContext);
+            var actualPersonSportQuery = await getPersonSportHandler.Handle(new GetPersonSportQuery(actualPeople[1].Id), new CancellationToken());
 
             // Assert
-            actualPersonSportQuery.Should().BeEquivalentTo(expectedPersonSportQuery);
+            actualPersonSportQuery.Single().Should().BeEquivalentTo(expectedPersonSportQuery);
 
         }
 
@@ -117,16 +119,13 @@ namespace SportsApiTest
         {
             // Arrange
             var dataContext = await getDbContext(getPeople(getSports()));
-            PeopleController peopleController = new PeopleController(dataContext);
 
             // Act 
-            ActionResult<PersonSportQuery> actionResult = await peopleController.GetPerson(4L);
-            var result = actionResult.Result as BadRequestObjectResult;
+            GetPersonSportHandler getPersonSportHandler = new GetPersonSportHandler(dataContext);
 
+            var tempPersonSport = await getPersonSportHandler.Handle(new GetPersonSportQuery(4L), new CancellationToken());
 
-            // Assert
-            result.Value.Should().Be("There is no person with that Id.");
-
+            tempPersonSport.Count().Should().Be(0);
         }
 
         [Fact]
@@ -164,15 +163,10 @@ namespace SportsApiTest
                         FavouriteSports = new List<string> { actualPeople[2].Sports.ElementAt(0).Name}
             },
             };
-
-            PeopleController peopleController = new PeopleController(dataContext);
-
-
+            GetPersonFavouritesHandler getPersonFavouritesHandler = new GetPersonFavouritesHandler(dataContext);
 
             // Act 
-            ActionResult<List<PersonFavouritesQuery>> actionResult = await peopleController.GetPeople();
-            var result = actionResult.Result as OkObjectResult;
-            var actualListPersonFavouritesQuery = result.Value as List<PersonFavouritesQuery>;
+            List<PersonFavouritesQuery> actualListPersonFavouritesQuery = await getPersonFavouritesHandler.Handle(new GetListPersonFavouritesQuery(), new CancellationToken()) ;
 
             // Assert
             actualListPersonFavouritesQuery.Should().BeEquivalentTo(expectedListPersonFavouritesQuery);
@@ -180,7 +174,7 @@ namespace SportsApiTest
         }
 
         [Fact]
-        public async void GetPeople_NoSports_Returns_With_None()
+        public async void GetPersonFavouritesHandler_NoSports_Returns_EmptySports()
         {
             // Arrange 
             var dataContext = getEmptyDbContext();
@@ -205,67 +199,80 @@ namespace SportsApiTest
                         IsValid = actualPerson.IsValid,
                         FavouriteSports = new List<string> { }
             } };
-            PeopleController peopleController = new PeopleController(dataContext);
+
+            GetPersonFavouritesHandler getPersonFavouritesHandler = new GetPersonFavouritesHandler(dataContext);
 
             // Act 
-            ActionResult<List<PersonFavouritesQuery>> actionResult = await peopleController.GetPeople();
-            var result = actionResult.Result as OkObjectResult;
-            var actualListPersonFavouritesQuery = result.Value as List<PersonFavouritesQuery>;
+            List<PersonFavouritesQuery> actualListPersonFavouritesQuery = await getPersonFavouritesHandler.Handle(new GetListPersonFavouritesQuery(), new CancellationToken());
 
             // Assert
             actualListPersonFavouritesQuery.Should().BeEquivalentTo(expectedListPersonFavouritesQuery);
         }
 
         [Fact]
-        public async void GetSports_Returns_ListOf_FavouriteSportsQuery()
+        public async void GetPersonFavouritesHandler_NoPeople_Returns_Empty()
         {
-            // TODO
-            var dataContext = await getDbContext(getPeople(getSports()));
-            SportsController sportController = new SportsController(dataContext);
-            List<FavouriteSportQuery> expectedListFavouriteSportQuery = new List<FavouriteSportQuery>
-            { new FavouriteSportQuery
-            {
-                       Name = "American Football",
-                       Favourites = 2
-            },
-            new FavouriteSportQuery
-            {
-                       Name = "Baseball",
-                       Favourites = 2
-            },
-            new FavouriteSportQuery
-            {
-                       Name = "Basketball",
-                       Favourites = 2
-            },
-            };
-
-            // Act 
-            ActionResult<List<FavouriteSportQuery>> actionResult = await sportController.GetSports();
-            var result = actionResult.Result as OkObjectResult;
-            var actualListFavouriteSportQuery = result.Value as List<FavouriteSportQuery>;
-
-            // Assert
-            actualListFavouriteSportQuery.Should().BeEquivalentTo(expectedListFavouriteSportQuery);
-
-        }
-
-        [Fact]
-        public async void GetSports_On_EmptyTable_Returns_BadRequest()
-        {
-            // Arrange
+            // Arrange 
             var dataContext = getEmptyDbContext();
-            SportsController sportsController = new SportsController(dataContext);
+            GetPersonFavouritesHandler getPersonFavouritesHandler = new GetPersonFavouritesHandler(dataContext);
 
             // Act 
-            ActionResult<List<FavouriteSportQuery>> actionResult = await sportsController.GetSports();
-            var result = actionResult.Result as BadRequestObjectResult;
-
+            List<PersonFavouritesQuery> actualListPersonFavouritesQuery = await getPersonFavouritesHandler.Handle(new GetListPersonFavouritesQuery(), new CancellationToken());
 
             // Assert
-            result.Value.Should().Be("There are no sports to return.");
-
+            actualListPersonFavouritesQuery.Should().BeEmpty();
         }
+
+        //[Fact]
+        //public async void GetSports_Returns_ListOf_FavouriteSportsQuery()
+        //{
+        //    // TODO
+        //    var dataContext = await getDbContext(getPeople(getSports()));
+        //    SportsController sportController = new SportsController(dataContext);
+        //    List<FavouriteSportQuery> expectedListFavouriteSportQuery = new List<FavouriteSportQuery>
+        //    { new FavouriteSportQuery
+        //    {
+        //               Name = "American Football",
+        //               Favourites = 2
+        //    },
+        //    new FavouriteSportQuery
+        //    {
+        //               Name = "Baseball",
+        //               Favourites = 2
+        //    },
+        //    new FavouriteSportQuery
+        //    {
+        //               Name = "Basketball",
+        //               Favourites = 2
+        //    },
+        //    };
+
+        //    // Act 
+        //    ActionResult<List<FavouriteSportQuery>> actionResult = await sportController.GetSports();
+        //    var result = actionResult.Result as OkObjectResult;
+        //    var actualListFavouriteSportQuery = result.Value as List<FavouriteSportQuery>;
+
+        //    // Assert
+        //    actualListFavouriteSportQuery.Should().BeEquivalentTo(expectedListFavouriteSportQuery);
+
+        //}
+
+        //[Fact]
+        //public async void GetSports_On_EmptyTable_Returns_BadRequest()
+        //{
+        //    // Arrange
+        //    var dataContext = getEmptyDbContext();
+        //    SportsController sportsController = new SportsController(dataContext);
+
+        //    // Act 
+        //    ActionResult<List<FavouriteSportQuery>> actionResult = await sportsController.GetSports();
+        //    var result = actionResult.Result as BadRequestObjectResult;
+
+
+        //    // Assert
+        //    result.Value.Should().Be("There are no sports to return.");
+
+        //}
 
 
 

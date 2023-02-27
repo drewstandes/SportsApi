@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using MediatR;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SportsApi.Data;
@@ -12,48 +13,40 @@ namespace SportsApi.Controllers
     [ApiController]
     public class PeopleController : ControllerBase
     {
+        private readonly IMediator _mediator;
         private readonly DataContext _context;
 
-        public PeopleController(DataContext context)
-        {
-            _context = context;
+        public PeopleController(IMediator mediator, DataContext dataContext) {
+            _mediator = mediator;
+            _context = dataContext;
         }
+
 
         [HttpGet]
         public async Task<ActionResult<List<PersonFavouritesQuery>>> GetPeople()
         {
-            List<PersonFavouritesQuery> personFavourites = await (from person in _context.People
-                                                                  select new PersonFavouritesQuery
-                                                                  {
-                                                                      FirstName = person.FirstName,
-                                                                      LastName = person.LastName,
-                                                                      IsEnabled = person.IsEnabled,
-                                                                      IsValid = person.IsValid,
-                                                                      IsAuthorised = person.IsAuthorised,
-                                                                      FavouriteSports = person.Sports.Select(s => s.Name).ToList()
-                                                                  }).ToListAsync();
 
-            return Ok(personFavourites);
+            List<PersonFavouritesQuery> personFavouritesQueries = await _mediator.Send(new GetListPersonFavouritesQuery());
+
+            if (personFavouritesQueries.Count == 0)
+            {
+                return BadRequest("There are no people to return.");
+            }
+
+            return Ok(personFavouritesQueries);
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<PersonSportQuery>> GetPerson(long id)
         {
-            var tempPersonSport = (from person in _context.People
-                               where person.Id == id
-                               select new PersonSportQuery
-                               {
-                                   FirstName = person.FirstName,
-                                   LastName = person.LastName,
-                                   FavouriteSport = person.Sports.First() == null ? "No favourite sport" : person.Sports.First().Name
-                               });
+            var tempPersonSport = await _mediator.Send(new GetPersonSportQuery(id));
 
             if (tempPersonSport.Count() == 0)
             {
                 return BadRequest("There is no person with that Id.");
             }
 
-            PersonSportQuery personSport = (PersonSportQuery)tempPersonSport.Single();
+            PersonSportQuery personSport = tempPersonSport.Single();
             return Ok(personSport);
         }
 
