@@ -9,11 +9,11 @@ using System;
 
 namespace SportsApi.Handlers
 {
-    public class GetPersonFavouritesHandler : IRequestHandler<GetListPersonFavouritesQuery, List<PersonFavouritesQuery>>
+    public class GetListPersonFavouritesHandler : IRequestHandler<GetListPersonFavouritesQuery, List<PersonFavouritesQuery>>
     {
         private readonly DataContext _context;
 
-        public GetPersonFavouritesHandler(DataContext dataContext)
+        public GetListPersonFavouritesHandler(DataContext dataContext)
         {
             _context = dataContext;
         }
